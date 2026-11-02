@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hūsey Scripts — Lua scripting for Windows</title>
+<meta name="description" content="Hūsey Scripts is a focused desktop app for writing and running Lua scripts. One editor, one output panel, nothing in the way.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+<style>
+:root {
+  --bg:       #07070c;
+  --s1:       #0c0c14;
+  --s2:       #10101a;
+  --line:     #1a1a2a;
+  --line2:    #242436;
+  --text:     #e4e4f4;
+  --dim:      #7070a0;
+  --faint:    #383855;
+  --accent:   #818cf8;
+  --accent-h: #a5b4fc;
+  --accent-dk:#5258cc;
+  --glow:     rgba(129,140,248,.12);
+  --glow2:    rgba(129,140,248,.06);
+  --ink:      #07070c;
+  --r:        6px;
+  --inset:    inset 0 1px 0 rgba(255,255,255,.05), inset 0 -1px 0 rgba(0,0,0,.35);
+  --grad:     linear-gradient(#131322,#0f0f1b);
+  --grad-h:   linear-gradient(#1a1a2c,#141422);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.65 'Space Grotesk',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── safe-area ── */
+:root{
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:middle}
+a{color:inherit}
+code,pre{font-family:'JetBrains Mono',monospace}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+
+/* ── buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:9px;height:42px;padding:0 20px;
+  background:var(--grad);border:1px solid var(--line2);border-radius:var(--r);
+  box-shadow:var(--inset);color:var(--text);text-decoration:none;font-weight:500;
+  font-family:inherit;font-size:15px;cursor:pointer;
+  transition:background .15s,border-color .15s,box-shadow .15s;white-space:nowrap;
+}
+.btn:hover{background:var(--grad-h);border-color:#303050;box-shadow:var(--inset),0 0 0 1px rgba(129,140,248,.1)}
+.btn:active{box-shadow:inset 0 2px 4px rgba(0,0,0,.5)}
+.btn:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+.btn.primary{
+  background:linear-gradient(#9199f8,#6b72e8);
+  border-color:#4a52c0;color:var(--ink);font-weight:600;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -1px 0 rgba(0,0,0,.25),0 0 20px rgba(129,140,248,.2);
+}
+.btn.primary:hover{
+  background:linear-gradient(#a0a8fa,#7178ec);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.2),0 0 28px rgba(129,140,248,.3);
+}
+.btn.sm{height:34px;padding:0 14px;font-size:14px}
+.btn.sm svg{width:15px;height:15px}
+
+/* ── nav ── */
+nav{
+  position:sticky;top:0;z-index:100;
+  border-bottom:1px solid var(--line);
+  background:rgba(7,7,12,.85);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+}
+nav .wrap{height:62px;display:flex;align-items:center;gap:6px}
+.brand{
+  display:flex;align-items:center;gap:10px;
+  font-weight:700;font-size:17px;letter-spacing:-.025em;text-decoration:none;
+  color:var(--text);flex-shrink:0;margin-right:10px;
+}
+.brand .logo-icon{
+  width:30px;height:30px;border-radius:7px;
+  background:linear-gradient(135deg,#6366f1,#818cf8);
+  display:grid;place-items:center;flex-shrink:0;
+  box-shadow:0 0 0 1px rgba(255,255,255,.1),0 0 16px rgba(99,102,241,.35);
+}
+.brand .logo-icon svg{width:16px;height:16px;stroke:#fff;stroke-width:2}
+nav a.l{
+  color:var(--dim);text-decoration:none;font-size:14px;font-weight:500;
+  padding:6px 10px;border-radius:5px;
+  transition:color .12s,background .12s;
+}
+nav a.l:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sp{flex:1}
+
+/* ── hero ── */
+.hero-shell{
+  position:relative;overflow:hidden;
+  border-bottom:1px solid var(--line);
+}
+.hero-shell::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(129,140,248,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(129,140,248,.035) 1px,transparent 1px);
+  background-size:64px 64px;
+  pointer-events:none;
+}
+.hero-shell::after{
+  content:'';position:absolute;
+  width:900px;height:900px;top:-350px;left:-300px;
+  background:radial-gradient(circle,rgba(99,102,241,.1) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero{padding:100px 0 88px;max-width:720px;position:relative;z-index:1}
+.hero-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  height:28px;padding:0 12px;
+  border:1px solid var(--line2);border-radius:100px;
+  font:500 13px/1 'JetBrains Mono',monospace;
+  color:var(--accent);background:rgba(129,140,248,.06);
+  margin-bottom:24px;letter-spacing:.02em;
+}
+.hero-kicker::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 8px var(--accent);
+  flex-shrink:0;animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hero h1{
+  font-size:clamp(40px,6vw,62px);line-height:1.05;
+  letter-spacing:-.04em;font-weight:700;
+  color:var(--text);margin-bottom:22px;
+}
+.hero h1 em{
+  font-style:normal;
+  background:linear-gradient(90deg,var(--accent-h),var(--accent));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero p{font-size:18px;color:var(--dim);max-width:540px;margin-bottom:36px;line-height:1.7}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.meta{color:var(--faint);font:500 13px 'JetBrains Mono',monospace;letter-spacing:.01em}
+.meta span+span::before{content:'·';margin:0 8px}
+
+/* init-hidden for motion */
+.m-start{opacity:0}
+
+/* ── band ── */
+.band{border-top:1px solid var(--line);background:var(--s1)}
+
+/* ── sections ── */
+section{padding:80px 0}
+.section-label{
+  font:500 12px/1 'JetBrains Mono',monospace;
+  letter-spacing:.12em;color:var(--accent);
+  text-transform:uppercase;margin-bottom:12px;
+}
+h2{font-size:30px;letter-spacing:-.03em;font-weight:700;margin-bottom:10px}
+.lead{color:var(--dim);max-width:500px;margin-bottom:44px;font-size:16px}
+
+/* ── cards ── */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{
+  padding:26px;
+  background:linear-gradient(145deg,#0f0f1c,#090912);
+  border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--inset);
+  transition:border-color .2s,box-shadow .2s;
+  position:relative;overflow:hidden;
+}
+.card::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 0%,rgba(129,140,248,.07) 0%,transparent 60%);
+  pointer-events:none;opacity:0;transition:opacity .3s;
+}
+.card:hover{border-color:rgba(129,140,248,.28);box-shadow:var(--inset),0 0 0 1px rgba(129,140,248,.08)}
+.card:hover::after{opacity:1}
+.card-icon{
+  width:38px;height:38px;border-radius:8px;
+  background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.18);
+  display:grid;place-items:center;margin-bottom:18px;
+  color:var(--accent);
+}
+.card h3{font-size:16px;font-weight:600;margin-bottom:7px;letter-spacing:-.02em}
+.card p{color:var(--dim);font-size:15px;line-height:1.6}
+
+/* ── steps ── */
+ol.steps{
+  list-style:none;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:16px;
+  counter-reset:s;
+}
+ol.steps li{
+  counter-increment:s;
+  padding:26px;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+  position:relative;
+}
+ol.steps li::before{
+  content:counter(s,'0' decimal);
+  display:block;
+  font:600 12px 'JetBrains Mono',monospace;
+  color:var(--accent);letter-spacing:.08em;
+  margin-bottom:16px;
+}
+ol.steps b{display:block;font-size:16px;font-weight:600;letter-spacing:-.02em;margin-bottom:5px}
+ol.steps span{color:var(--dim);font-size:14px;line-height:1.6}
+
+/* ── demo window ── */
+.demo-wrap{
+  border:1px solid var(--line2);border-radius:10px;
+  overflow:hidden;background:var(--s1);
+  box-shadow:0 0 0 1px rgba(129,140,248,.05),0 20px 60px rgba(0,0,0,.5);
+}
+.demo-titlebar{
+  display:flex;align-items:center;gap:0;
+  padding:0 16px;height:44px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(#0e0e18,#0c0c16);
+}
+.win-dots{display:flex;gap:7px;align-items:center;margin-right:16px}
+.wd{width:12px;height:12px;border-radius:50%}
+.wd-r{background:#ff5f57;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+.wd-y{background:#febc2e;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+.wd-g{background:#28c840;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+.demo-tabs{display:flex;gap:0;flex:1}
+.demo-tab{
+  height:44px;padding:0 18px;
+  font:500 13px 'JetBrains Mono',monospace;
+  color:var(--dim);cursor:pointer;
+  border-right:1px solid var(--line);
+  display:flex;align-items:center;gap:7px;
+  transition:color .12s,background .12s;background:transparent;border:none;
+  border-right:1px solid var(--line);
+}
+.demo-tab[data-active="true"]{
+  color:var(--text);
+  background:rgba(129,140,248,.06);
+  border-bottom:1px solid var(--accent);
+}
+.demo-actions{display:flex;gap:8px;margin-left:auto}
+.chips{display:flex;flex-wrap:wrap;gap:7px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.chip{
+  height:30px;padding:0 12px;
+  font:inherit;font-size:13px;font-weight:500;
+  color:var(--dim);background:var(--grad);
+  border:1px solid var(--line2);border-radius:5px;
+  box-shadow:var(--inset);cursor:pointer;
+  transition:color .1s,background .1s,border-color .1s;
+}
+.chip:hover{color:var(--text);background:var(--grad-h)}
+.chip[aria-pressed=true]{color:var(--ink);background:linear-gradient(#9199f8,#6b72e8);border-color:#4a52c0}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#ed{height:280px}
+#out{
+  margin:0;height:160px;overflow:auto;
+  padding:12px 18px;border-top:1px solid var(--line);
+  background:linear-gradient(#060609,#08080e);
+  font:13px/1.6 'JetBrains Mono',monospace;
+  white-space:pre-wrap;word-break:break-word;
+  box-shadow:inset 0 4px 12px rgba(0,0,0,.4);
+}
+#out .err{color:#f87171}#out .info{color:var(--faint)}#out .empty{color:var(--faint)}
+
+/* ── download ── */
+.dl{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:24px;flex-wrap:wrap;padding:40px 44px;
+  border:1px solid rgba(129,140,248,.18);border-radius:10px;
+  background:linear-gradient(135deg,rgba(99,102,241,.07) 0%,rgba(99,102,241,.02) 50%,transparent 100%);
+  box-shadow:inset 0 1px 0 rgba(129,140,248,.1),0 0 0 1px rgba(129,140,248,.04);
+  position:relative;overflow:hidden;
+}
+.dl::before{
+  content:'';position:absolute;right:-100px;top:-100px;
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 65%);
+  pointer-events:none;
+}
+.dl h2{margin-bottom:6px}
+.dl p{color:var(--dim);font-size:15px}
+
+/* ── faq ── */
+details{border-bottom:1px solid var(--line)}
+summary{
+  cursor:pointer;padding:20px 0;font-weight:500;font-size:16px;
+  list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;
+  letter-spacing:-.01em;
+}
+summary::-webkit-details-marker{display:none}
+summary .chevron{color:var(--faint);transition:transform .2s,color .2s;flex-shrink:0}
+details[open] summary .chevron{transform:rotate(180deg);color:var(--accent)}
+details[open] summary{color:var(--accent)}
+details .ans{padding:0 0 20px;color:var(--dim);max-width:640px;font-size:15px;line-height:1.7}
+
+/* ── footer ── */
+footer{
+  border-top:1px solid var(--line);padding:32px 0;
+  color:var(--faint);font-size:14px;
+}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+.footer-brand{
+  display:flex;align-items:center;gap:8px;
+  font-weight:700;font-size:15px;letter-spacing:-.02em;color:var(--dim);
+}
+.footer-brand .logo-icon{width:22px;height:22px;border-radius:5px}
+
+/* ── reduced motion ── */
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .m-start{opacity:1 !important}
+  @keyframes pulse{0%,100%{opacity:1}}
+}
+
+/* ── responsive ── */
+@media(max-width:820px){
+  .grid,ol.steps{grid-template-columns:1fr}
+  .hero{padding:64px 0 56px}
+  nav a.l{display:none}
+  .dl{padding:28px 24px}
+  .dl h2{font-size:22px}
+}
+@media(max-width:480px){
+  .hero h1{font-size:36px}
+  .wrap{padding:0 18px}
+  .cta{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+
+<body>
+
+<!-- ── NAV ── -->
+<nav class="animate__animated animate__fadeInDown animate__faster">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <div class="logo-icon">
+        <svg viewBox="0 0 16 16"><path d="M4 5L2 8l2 3M12 5l2 3-2 3M9 4l-2 8"/></svg>
+      </div>
+      Hūsey Scripts
+    </a>
+    <a class="l" href="#demo">Demo</a>
+    <a class="l" href="#features">Features</a>
+    <a class="l" href="#start">Start</a>
+    <a class="l" href="#faq">FAQ</a>
+    <div class="sp"></div>
+    <a class="btn sm primary" href="#download">
+      <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7.5 8 10l3-2.5M3 13h10"/></svg>
+      Download
+    </a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero-shell">
+  <header class="wrap hero">
+    <div class="hero-kicker">v1.0 &mdash; free for personal use</div>
+    <h1 class="m-start">Write Lua.<br><em>Nothing in the way.</em></h1>
+    <p class="m-start">A lightweight desktop environment for writing and running Lua scripts on Windows. One editor, one output panel, zero friction.</p>
+    <div class="cta m-start">
+      <a class="btn primary" href="downloads/HuseyScripts-Setup.exe" download>
+        <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7.5 8 10l3-2.5M3 13h10"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn" href="#demo">
+        <svg viewBox="0 0 16 16"><path d="M5 3.5v9l7-4.5z"/></svg>
+        Try the live demo
+      </a>
+    </div>
+    <p class="meta m-start">
+      <span>Windows 10 &amp; 11</span>
+      <span>~40 MB</span>
+      <span>Lua 5.3</span>
+    </p>
+  </header>
+</div>
+
+<!-- ── DEMO ── -->
+<section id="demo" style="padding-top:0">
+  <div class="wrap">
+    <h2 style="margin-bottom:8px">Try it right here</h2>
+    <p class="lead">The real Lua runtime, running in your browser. Pick an example or write your own.</p>
+    <div class="demo-wrap">
+      <div class="demo-titlebar">
+        <div class="win-dots">
+          <span class="wd wd-r"></span>
+          <span class="wd wd-y"></span>
+          <span class="wd wd-g"></span>
+        </div>
+        <span style="font:500 13px 'JetBrains Mono',monospace;color:var(--dim)" id="demo-name">hello_world.lua</span>
+        <div class="demo-actions" style="margin-left:auto">
+          <button class="btn sm" id="d-clear">
+            <svg viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.5 8h6l.5-8"/></svg>
+            Clear
+          </button>
+          <button class="btn sm primary" id="d-run">
+            <svg viewBox="0 0 16 16"><path d="M5 3.5v9l7-4.5z"/></svg>
+            Run
+          </button>
+        </div>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Examples"></div>
+      <div id="ed"></div>
+      <pre id="out"><span class="empty">Press Run, or Ctrl+Enter inside the editor.</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<div class="band">
+<section id="features">
+  <div class="wrap">
+    <p class="section-label">Features</p>
+    <h2>Built to get out of the way</h2>
+    <p class="lead">Everything you need to iterate on Lua, nothing to configure first.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">
+          <svg viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h6"/></svg>
+        </div>
+        <h3>Monaco editor</h3>
+        <p>Full Lua syntax highlighting, bracket matching, multi-cursor, and Ctrl+Enter to run — the same engine that powers VS Code.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">
+          <svg viewBox="0 0 16 16"><path d="M8 2.5 13 5v6l-5 2.5L3 11V5z"/></svg>
+        </div>
+        <h3>Sandboxed runtime</h3>
+        <p>Scripts run in an isolated Lua 5.3 environment with a 5-second time limit. A stuck loop never freezes the app.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">
+          <svg viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4zM9 2.5v3h3"/></svg>
+        </div>
+        <h3>Script library</h3>
+        <p>Keep a personal collection of scripts, rename them freely, and switch between them without losing your work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ── STEPS ── -->
+<section id="start">
+  <div class="wrap">
+    <p class="section-label">Getting started</p>
+    <h2>Three steps, one minute</h2>
+    <p class="lead">Install, open, write. That's the whole setup.</p>
+    <ol class="steps">
+      <li>
+        <b>Download &amp; install</b>
+        <span>Grab the Windows installer and run it. No dependencies, no configuration.</span>
+      </li>
+      <li>
+        <b>Write a script</b>
+        <span>Open a new file or pick from the bundled examples. The editor is already focused.</span>
+      </li>
+      <li>
+        <b>Run it</b>
+        <span>Hit Ctrl+Enter — or the Run button — and read the output below. Iterate from there.</span>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ── DOWNLOAD ── -->
+<div class="band">
+<section id="download">
+  <div class="wrap">
+    <div class="dl">
+      <div>
+        <h2>Ready when you are</h2>
+        <p>Free for personal use. Windows 10 and 11. About 40 MB.</p>
+      </div>
+      <a class="btn primary" href="downloads/HuseyScripts-Setup.exe" download>
+        <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7.5 8 10l3-2.5M3 13h10"/></svg>
+        Download for Windows
+      </a>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ── FAQ ── -->
+<section id="faq">
+  <div class="wrap">
+    <p class="section-label">FAQ</p>
+    <h2>Common questions</h2>
+    <p class="lead" style="margin-bottom:28px">Short answers to the usual ones.</p>
+
+    <details open>
+      <summary>Is it free?<svg class="chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></summary>
+      <p class="ans">Yes. No accounts, no ads, no paid tier. Download and use it.</p>
+    </details>
+    <details>
+      <summary>Which version of Lua?<svg class="chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></summary>
+      <p class="ans">Lua 5.3 — including coroutines, metatables, and the full standard library: string, table, math, io, os, and more.</p>
+    </details>
+    <details>
+      <summary>Can it hook into games or other programs?<svg class="chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></summary>
+      <p class="ans">No. Hūsey Scripts is a standalone Lua runner. It does not attach to, read from, or modify other processes.</p>
+    </details>
+    <details>
+      <summary>Where are my scripts stored?<svg class="chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></summary>
+      <p class="ans">Locally, on your own machine. Nothing is uploaded anywhere.</p>
+    </details>
+    <details>
+      <summary>Does it work on macOS or Linux?<svg class="chevron" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></summary>
+      <p class="ans">Not yet — the current release is Windows-only. macOS and Linux builds are planned.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="wrap">
+    <div class="footer-brand">
+      <div class="logo-icon" style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#818cf8);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.1)">
+        <svg viewBox="0 0 16 16" style="width:12px;height:12px;stroke:#fff;stroke-width:2"><path d="M4 5L2 8l2 3M12 5l2 3-2 3M9 4l-2 8"/></svg>
+      </div>
+      Hūsey Scripts
+    </div>
+    <span>Made for people who like small tools.</span>
+  </div>
+</footer>
+
+<!-- ── scripts ── -->
+<script src="https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+<script>
+/* ── Lua runner + Monaco setup ── */
+const $ = id => document.getElementById(id);
+const EX = [
+  ["Hello world","hello_world.lua",`print("Hello from Hūsey Scripts")\n\nlocal name = "world"\nprint(("Hello, %s!"):format(name))\n`],
+  ["Fibonacci","fibonacci.lua",`local function fib(n)\n  if n < 2 then return n end\n  return fib(n - 1) + fib(n - 2)\nend\n\nfor i = 0, 15 do\n  io.write(fib(i), " ")\nend\nprint()\n`],
+  ["Metatables","metatables.lua",`local Vec = {}\nVec.__index = Vec\nVec.__add = function(a, b) return Vec.new(a.x + b.x, a.y + b.y) end\nVec.__tostring = function(v) return "(" .. v.x .. ", " .. v.y .. ")" end\n\nfunction Vec.new(x, y) return setmetatable({x = x, y = y}, Vec) end\n\nprint(Vec.new(1, 2) + Vec.new(3, 4))\n`],
+  ["Coroutines","coroutines.lua",`local gen = coroutine.wrap(function()\n  for i = 1, 5 do coroutine.yield(i * i) end\nend)\n\nfor _ = 1, 5 do print(gen()) end\n`],
+  ["Error handling","errors.lua",`local ok, err = pcall(function()\n  error("something went wrong")\nend)\nprint(ok, err)\n\n-- uncaught errors are reported too\nlocal t = nil\nprint(t.field)\n`],
+  ["Infinite loop","loop.lua",`-- stopped automatically after 5 seconds\nwhile true do end\n`],
+];
+let editor, curEx = 0;
+const out = $("out");
+function log(text, cls){
+  if(out.querySelector(".empty")) out.textContent = "";
+  const d = document.createElement("div"); if(cls) d.className = cls;
+  d.textContent = text; out.append(d); out.scrollTop = out.scrollHeight;
+}
+function clearOut(){ out.innerHTML = '<span class="empty">Press Run, or Ctrl+Enter inside the editor.</span>'; }
+const {lua, lauxlib, lualib, to_luastring, to_jsstring} = fengari;
+function runLua(code){
+  const L = lauxlib.luaL_newstate(); lualib.luaL_openlibs(L);
+  const grab = i => { lauxlib.luaL_tolstring(L, i); const s = to_jsstring(lua.lua_tostring(L,-1)); lua.lua_pop(L,1); return s; };
+  lua.lua_pushcfunction(L, L2 => { const n = lua.lua_gettop(L2), p = []; for(let i=1;i<=n;i++) p.push(grab(i)); log(p.join("\t")); return 0; });
+  lua.lua_setglobal(L, to_luastring("print"));
+  let buf = "";
+  lua.lua_getglobal(L, to_luastring("io"));
+  lua.lua_pushcfunction(L, L2 => { const n = lua.lua_gettop(L2); for(let i=1;i<=n;i++) buf += grab(i); return 0; });
+  lua.lua_setfield(L, -2, to_luastring("write")); lua.lua_pop(L,1);
+  const t0 = performance.now();
+  lua.lua_sethook(L, L2 => { if(performance.now()-t0 > 5000) lauxlib.luaL_error(L2, to_luastring("script stopped: ran longer than 5 seconds")); }, lua.LUA_MASKCOUNT, 10000);
+  let st = lauxlib.luaL_loadstring(L, to_luastring(code));
+  if(st === lua.LUA_OK) st = lua.lua_pcall(L, 0, 0, 0);
+  if(buf) log(buf);
+  if(st !== lua.LUA_OK) log(to_jsstring(lua.lua_tostring(L,-1)), "err");
+  else log("Finished in " + Math.round(performance.now()-t0) + " ms", "info");
+}
+function run(){ if(!editor) return; clearOut(); try{ runLua(editor.getValue()); }catch(e){ log(String(e),"err"); } }
+$("d-run").onclick = run; $("d-clear").onclick = clearOut;
+
+const chips = $("chips");
+EX.forEach(([label,filename], i) => {
+  const b = document.createElement("button");
+  b.className = "chip"; b.textContent = label;
+  b.setAttribute("aria-pressed", i === 0);
+  b.onclick = () => {
+    curEx = i;
+    $("demo-name").textContent = filename;
+    chips.querySelectorAll(".chip").forEach((c,j) => c.setAttribute("aria-pressed", j===i));
+    if(editor) editor.setValue(EX[i][2]); clearOut();
+  };
+  chips.append(b);
+});
+
+require.config({paths:{vs:"https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs"}});
+require(["vs/editor/editor.main"], () => {
+  monaco.editor.defineTheme("husey", {
+    base:"vs-dark", inherit:true,
+    rules:[
+      {token:"comment",foreground:"383855",fontStyle:"italic"},
+      {token:"keyword",foreground:"818cf8"},
+      {token:"string",foreground:"a78bfa"},
+      {token:"number",foreground:"c084fc"},
+      {token:"identifier",foreground:"e4e4f4"},
+      {token:"delimiter",foreground:"5a5a80"},
+    ],
+    colors:{
+      "editor.background":"#09090f",
+      "editor.foreground":"#e4e4f4",
+      "editorLineNumber.foreground":"#202030",
+      "editorLineNumber.activeForeground":"#505075",
+      "editor.lineHighlightBackground":"#0e0e18",
+      "editor.selectionBackground":"#6366f128",
+      "editorCursor.foreground":"#818cf8",
+      "editorWidget.background":"#0d0d16",
+      "editorWidget.border":"#1a1a2a",
+    }
+  });
+  editor = monaco.editor.create($("ed"), {
+    value: EX[0][2], language:"lua", theme:"husey",
+    fontFamily:'"JetBrains Mono", monospace', fontSize:13.5, lineHeight:22,
+    minimap:{enabled:false}, automaticLayout:true,
+    scrollBeyondLastLine:false, padding:{top:14,bottom:10},
+    overviewRulerLanes:0, tabSize:2, renderLineHighlight:"gutter",
+  });
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, run);
+});
+</script>
+
+<!-- ── Motion.dev animations ── -->
+<script type="module">
+import { animate, inView, stagger } from "https://cdn.jsdelivr.net/npm/motion@11.3.28/+esm";
+
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!reduced) {
+  /* hero entrance — orchestrated sequence */
+  const heroItems = document.querySelectorAll(".hero .m-start");
+  animate(heroItems,
+    { opacity: [0, 1], y: [22, 0] },
+    { duration: 0.55, delay: stagger(0.1, { start: 0.1 }), easing: [0.25, 1, 0.5, 1] }
+  );
+
+  /* kicker badge */
+  animate(".hero-kicker",
+    { opacity: [0, 1], scale: [0.92, 1] },
+    { duration: 0.4, easing: [0.34, 1.56, 0.64, 1] }
+  );
+
+  /* demo window */
+  inView(".demo-wrap", ({ target }) => {
+    animate(target,
+      { opacity: [0, 1], y: [18, 0] },
+      { duration: 0.55, easing: [0.25, 1, 0.5, 1] }
+    );
+  }, { amount: 0.15 });
+
+  /* feature cards — staggered */
+  inView(".card", ({ target }) => {
+    const cards = document.querySelectorAll(".card");
+    const idx = [...cards].indexOf(target);
+    animate(target,
+      { opacity: [0, 1], y: [14, 0] },
+      { duration: 0.4, delay: idx * 0.07, easing: "ease-out" }
+    );
+  }, { amount: 0.2 });
+
+  /* steps */
+  inView("ol.steps li", ({ target }) => {
+    const items = document.querySelectorAll("ol.steps li");
+    const idx = [...items].indexOf(target);
+    animate(target,
+      { opacity: [0, 1], x: [-10, 0] },
+      { duration: 0.38, delay: idx * 0.08, easing: "ease-out" }
+    );
+  }, { amount: 0.25 });
+
+  /* download banner */
+  inView(".dl", ({ target }) => {
+    animate(target,
+      { opacity: [0, 1], scale: [0.98, 1] },
+      { duration: 0.45, easing: [0.25, 1, 0.5, 1] }
+    );
+  }, { amount: 0.3 });
+
+  /* faq items */
+  inView("details", ({ target }) => {
+    animate(target,
+      { opacity: [0, 1] },
+      { duration: 0.3, easing: "ease-out" }
+    );
+  }, { amount: 0.5 });
+}
+</script>
+
+</body>
+</html>
